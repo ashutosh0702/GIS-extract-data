@@ -1,4 +1,3 @@
 numpy
 shapely
 rasterio
-pyproj
