@@ -1,0 +1,24 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.9
+    commands:
+      - echo "Installing dependencies..."
+      - pip install -r requirements.txt -t ./src
+
+  pre_build:
+    commands:
+      - echo "Zipping the code..."
+      - cd src
+      - zip -r extract-data.zip .
+
+  build:
+    commands:
+      - echo "Uploading the code to Lambda function..."
+      - aws lambda update-function-code --function-name extract-data --zip-file fileb://extract-data.zip
+
+artifacts:
+  files:
+    - src/extract-data.zip
