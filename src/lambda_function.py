@@ -2,7 +2,7 @@ import json
 import boto3
 import urllib.parse
 from datetime import date
-from datetime import timedelta
+from datetime import timedelta, strptime
 import requests
 import numpy as np
 
@@ -264,6 +264,18 @@ def lambda_handler(event, context):
     for ky,value in formula_dict.items():
         
         msg = calculate_data(ky,value,meta_details)
+    
+    #Calculate Initial wait days
+    # Convert date2_str to a datetime object
+    date2 = strptime(sensing_date.split("T")[0], '%Y-%m-%d')
+
+    # Calculate the difference
+    difference = date2 - today
+
+    # Retrieve the difference in days
+    days_difference = difference.total_seconds()
+
+    print(days_difference) 
 
     #Crrate the step function input json
     stepfunctiondata = {
@@ -272,8 +284,7 @@ def lambda_handler(event, context):
             "coords" : coords[0],
             "payload" : payload,
             "key" : key,},
-        
-        "iteration_count": 0
+        "wait_duration_seconds" : days_difference
     }
 
     # Start the Step Functions state machine with the STAC payload as input
