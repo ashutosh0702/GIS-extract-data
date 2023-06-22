@@ -2,3 +2,4 @@ numpy
 shapely
 rasterio
 requests
+urllib3
