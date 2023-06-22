@@ -2,7 +2,7 @@ import json
 import boto3
 import urllib.parse
 from datetime import date
-from datetime import timedelta, strptime
+from datetime import timedelta, datetime
 import requests
 import numpy as np
 
@@ -267,7 +267,7 @@ def lambda_handler(event, context):
     
     #Calculate Initial wait days
     # Convert date2_str to a datetime object
-    date2 = strptime(sensing_date.split("T")[0], '%Y-%m-%d')
+    date2 = datetime.strptime(sensing_date.split("T")[0], '%Y-%m-%d')
 
     # Calculate the difference
     difference = date2 - today
