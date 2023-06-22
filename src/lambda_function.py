@@ -270,10 +270,10 @@ def lambda_handler(event, context):
     date2 = datetime.strptime(sensing_date.split("T")[0], '%Y-%m-%d')
 
     # Calculate the difference
-    difference = date2 - today
+    difference = today - date2
 
     # Retrieve the difference in days
-    days_difference = difference.total_seconds()
+    days_difference = int(difference.total_seconds())
 
     print(days_difference) 
 
