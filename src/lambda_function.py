@@ -167,9 +167,10 @@ def calculate_data(index_name,band_list,meta_details):
 def lambda_handler(event, context):
     
     # Get S3 bucket and file information from event
-    
+    print(event)
     bucket_input = event['Records'][0]['s3']['bucket']['name']
-    key = urllib.parse.unquote_plus(event['Records'][0]['s3']['object']['key'], encoding='utf-8')
+    key = event['Records'][0]['s3']['object']['key'].replace('+', ' ')
+
 
     print(bucket_input,key)
     # Download GeoJSON file from S3
