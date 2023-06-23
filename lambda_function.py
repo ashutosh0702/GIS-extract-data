@@ -184,7 +184,7 @@ def lambda_handler(event, context):
     
     
     now = datetime.now()
-    yesterday = now - timedelta(days=5)
+    yesterday = now - timedelta(days=6)
 
     time_range = f"{yesterday.strftime('%Y-%m-%d')}T{now.strftime('%H:%M:%S')}Z/{now.strftime('%Y-%m-%d')}T{now.strftime('%H:%M:%S')}Z"
     print(f"Query data for {time_range}")
