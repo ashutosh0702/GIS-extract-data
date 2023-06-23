@@ -3,3 +3,4 @@ pyproj
 requests
 urllib3
 numpy
+shapely
