@@ -165,6 +165,7 @@ def calculate_data(index_name,band_list,meta_details):
 
 def lambda_handler(event, context):
     
+    print("--------- Successfully deployed using docker image -----------")
     # Get S3 bucket and file information from event
     print(event)
     bucket_input = event['Records'][0]['s3']['bucket']['name']
