@@ -10,7 +10,7 @@ COPY src/requirements.txt .
 
 
 # Install dependencies
-RUN pip install --no-cache-dir -r /app/src/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Set the entry point
 CMD ["lambda_function.lambda_handler"]
