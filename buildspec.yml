@@ -17,8 +17,3 @@ phases:
      
       - echo Updating the AWS Lambda function...
       - aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --image-uri $ECR_REGISTRY/$ECR_REPOSITORY_NAME:$IMAGE_TAG
-
-# Use the standard CodeBuild runtime that supports Docker
-metadata:
-  runtime-versions:
-    docker: 20

@@ -8,7 +8,7 @@ WORKDIR /app
 COPY src /app/src
 
 # Install the required dependencies
-RUN python3.9 -m pip install -r /src/requirements.txt -t .
+RUN python3.9 -m pip install -r requirements.txt -t .
 
 # Set the entrypoint to the Lambda function handler
 CMD ["src/lambda_function.lambda_handler"]
