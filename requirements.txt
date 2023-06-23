@@ -1,4 +1,4 @@
-shapely
+pyproj
 rasterio
 requests==2.28.2
 urllib3==1.25.4
