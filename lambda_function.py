@@ -183,11 +183,10 @@ def lambda_handler(event, context):
     bbox,coords = get_bbox_and_coords_from_geojson(geojson_str)
     
     
-    #time format
-    today = date.today()
-    yesterday = today-timedelta(days=5)
-    
-    time_range = f"{yesterday.strftime('%Y-%m-%d')}T00:00:00Z/{today.strftime('%Y-%m-%d')}T00:00:00Z"
+    now = datetime.now()
+    yesterday = now - timedelta(days=5)
+
+    time_range = f"{yesterday.strftime('%Y-%m-%d')}T{now.strftime('%H:%M:%S')}Z/{now.strftime('%Y-%m-%d')}T{now.strftime('%H:%M:%S')}Z"
     print(f"Query data for {time_range}")
    
     #Creating header and payload for post request to element84
@@ -245,10 +244,10 @@ def lambda_handler(event, context):
     
     #Calculate Initial wait days
     # Convert date2_str to a datetime object
-    date2 = datetime.strptime(sensing_date.split("T")[0], '%Y-%m-%d').date()
+    date2 = datetime.strptime(sensing_date.split("T")[0], '%Y-%m-%d')
 
     # Calculate the difference
-    difference = today - date2
+    difference = now - date2
 
     # Retrieve the difference in days
     seconds_difference = int(difference.total_seconds())
