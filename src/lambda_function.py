@@ -1,6 +1,5 @@
 import json
 import boto3
-import urllib.parse
 from datetime import date
 from datetime import timedelta, datetime
 import requests
