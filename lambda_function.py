@@ -16,6 +16,7 @@ sys.path.append('/opt')
 
 
 s3 = boto3.client('s3')
+sns = boto3.client('sns')
 stac_api_endpoint = "https://earth-search.aws.element84.com/v1/search"
 bucket_out = "sentinel-2-cogs-rnil"
 
@@ -209,39 +210,82 @@ def lambda_handler(event, context):
     print(data)
     
 
-    #Extract the necessary projection details
-    utm_epsg , sensing_date = "EPSG:"+str(data["features"][0]["properties"]["proj:epsg"]) , data["features"][0]["properties"]["created"]
-    utm , wgs84 = CRS.from_string(utm_epsg) , CRS.from_string('EPSG:4326')
-    project = Transformer.from_crs(wgs84, utm, always_xy=True)
-    
-    #Transform the geojson coordinates to utm
-    utm = []
-    for item in coords[0]:
-        utm_pt = project.transform(item[0],item[1])
-        utm.append(utm_pt)
-    
-    utm_polygon = Polygon(utm)
-    
-    assets = data["features"][0]["assets"]
-    
-    #Create the Index formula dictionary
-    formula_dict = {
-        'NDVI' : ['red','nir'],
-        'NDMI' : ['nir08','swir16']
-    }
-    
-    #Create the meta details dictionary for calculation index
-    meta_details = {
-        "fileName" : key[:-8],
-        "sensingDate" : sensing_date.split("T")[0],
-        "UTMshape" : utm_polygon,
-        "asset_data" : assets
-    }
-    
-    for ky,value in formula_dict.items():
+    try :
+        utm_epsg , utm_zone, sensing_date = "EPSG:"+str(data["features"][0]["properties"]["proj:epsg"]) , data["features"][0]["properties"]['mgrs:utm_zone'] , data["features"][0]["properties"]["created"]
+    except:
         
-        msg = calculate_data(ky,value,meta_details)
+        topic_arn = "arn:aws:sns:us-west-2:268065301848:NoData-Sentinel-API"
+        
+        msg = f"No data from Sentinel satellite on {time_range} for farm name : {key}"
+        
+        response = sns.publish(
+            TopicArn=topic_arn,
+            Message=msg,
+            Subject = "NoData from Sentinel-2"
+            )
+        
+        return event
+        
+    else:
+        utm , wgs84 = CRS.from_string(utm_epsg) , CRS.from_string('EPSG:4326')
+        project = Transformer.from_crs(wgs84, utm, always_xy=True)
     
+        utm = []
+        for item in coords:
+            utm_pt = project.transform(item[0],item[1])
+            utm.append(utm_pt)
+    
+        utm_polygon = Polygon(utm)
+    
+        assets = data["features"][0]["assets"]
+    
+    
+        formula_dict = {
+            'NDVI' : ['red','nir'],
+            'NDMI' : ['nir08','swir16']
+        }
+    
+        meta_details = {
+            "fileName" : key[:-8],
+            "sensingDate" : sensing_date.split("T")[0],
+            "UTMshape" : utm_polygon,
+            "asset_data" : assets
+        }
+    
+        for ky,value in formula_dict.items():
+        
+            msg = calculate_data(ky,value,meta_details)
+       
+        date2 = datetime.strptime(sensing_date.split("T")[0], '%Y-%m-%d')
+
+    
+        difference = now - date2
+
+    
+        seconds_difference = int(difference.total_seconds())
+
+
+        
+        stepfunctiondata = {
+
+            "input_data" : {
+                "coords" : coords[0],
+                "payload" : payload,
+                "key" : key,},
+            "wait_duration_seconds" : seconds_difference
+        }
+
+        # Start the Step Functions state machine with the STAC payload as input
+        sfn = boto3.client('stepfunctions')
+        state_machine_arn = 'arn:aws:states:us-west-2:268065301848:stateMachine:sentinel-2-data-calculate'
+        response = sfn.start_execution(
+            stateMachineArn=state_machine_arn,
+            input=json.dumps(stepfunctiondata)
+        )
+
+        print(response)
+
+    '''
     #Calculate Initial wait days
     # Convert date2_str to a datetime object
     date2 = datetime.strptime(sensing_date.split("T")[0], '%Y-%m-%d')
@@ -276,7 +320,7 @@ def lambda_handler(event, context):
 
 
     return f"####---- data successfully cretead for {key} -----#####"
-
+    '''
     
     
     
