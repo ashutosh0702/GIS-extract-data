@@ -12,5 +12,5 @@ COPY src/ /app/src/
 RUN pip install --no-cache-dir -r /app/src/requirements.txt
 
 # Set the entry point
-CMD ["/app/src/lambda_function.lambda_handler"]
+CMD ["lambda_function.lambda_handler"]
 
