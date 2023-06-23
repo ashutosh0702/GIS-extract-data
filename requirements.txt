@@ -1,4 +1,4 @@
 shapely
 rasterio
-requests
-urllib3
+requests==2.28.2
+urllib3==1.25.4
