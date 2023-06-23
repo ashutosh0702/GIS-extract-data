@@ -6,10 +6,10 @@ WORKDIR /app
 
 # Copy the source code
 COPY src/ /app/src/
-COPY requirements.txt /app
+#COPY requirements.txt /app
 
 # Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r /app/src/requirements.txt
 
 # Set the entry point
 CMD ["python", "/app/src/lambda_function.py"]
