@@ -97,29 +97,6 @@ def write_tiff_and_upload(upload_details):
         dst.nodata = -9999
         dst.write(arr.astype(rasterio.float32), 1)
 
-    '''
-    # Open the raster file
-    with rasterio.open(os.path.join('/tmp','tmp.tif')) as src:
-    # Check the pixel size
-        if src.res[0] == 20:
-        # Resample the raster to 10m pixel size
-            transform = src.transform
-            transform = transform.scale(0.5, 0.5)
-            new_height = int(src.height * 2)
-            new_width = int(src.width * 2)
-            kwargs = src.meta.copy()
-            kwargs.update({
-                'transform': transform,
-                'height': new_height,
-                'width': new_width
-            })
-            with rasterio.open(os.path.join('/tmp','tmp.tif'), 'w', **kwargs) as dst:
-                for i in range(1, src.count + 1):
-                    raster = src.read(i)
-                    dst.write(raster, i)
-        else:
-            print("Pixel size is not 20. Doing nothing.")
-    '''
 
     
     s3.upload_file(os.path.join('/tmp','tmp.tif'), bucket_out, filetiff)   
@@ -210,7 +187,7 @@ def lambda_handler(event, context):
     yesterday = today-timedelta(days=5)
     
     time_range = f"{yesterday.strftime('%Y-%m-%d')}T00:00:00Z/{today.strftime('%Y-%m-%d')}T00:00:00Z"
-    
+    print(f"Query data for {time_range}")
    
     #Creating header and payload for post request to element84
     
@@ -267,15 +244,15 @@ def lambda_handler(event, context):
     
     #Calculate Initial wait days
     # Convert date2_str to a datetime object
-    date2 = datetime.strptime(sensing_date.split("T")[0], '%Y-%m-%d')
+    date2 = datetime.strptime(sensing_date.split("T")[0], '%Y-%m-%d').date()
 
     # Calculate the difference
     difference = today - date2
 
     # Retrieve the difference in days
-    days_difference = int(difference.total_seconds())
+    seconds_difference = int(difference.total_seconds())
 
-    print(days_difference) 
+    print(seconds_difference) 
 
     #Crrate the step function input json
     stepfunctiondata = {
@@ -284,7 +261,7 @@ def lambda_handler(event, context):
             "coords" : coords[0],
             "payload" : payload,
             "key" : key,},
-        "wait_duration_seconds" : days_difference
+        "wait_duration_seconds" : seconds_difference
     }
 
     # Start the Step Functions state machine with the STAC payload as input
@@ -297,9 +274,8 @@ def lambda_handler(event, context):
 
     print(response)
 
-    print(key,response)
 
-    return f"data successfully cretead for {key}"
+    return f"####---- data successfully cretead for {key} -----#####"
 
     
     
