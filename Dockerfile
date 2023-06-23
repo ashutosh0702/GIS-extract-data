@@ -1,5 +1,5 @@
 # Base image
-FROM python:3.9-alpine
+FROM public.ecr.aws/lambda/python:3.9
 
 # Set the working directory
 WORKDIR /app
