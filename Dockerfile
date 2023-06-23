@@ -1,14 +1,16 @@
-# Use the official Python base image
-FROM python:3.9-slim
+# Base image
+FROM python:3.9
 
-# Set the working directory in the container
+# Set the working directory
 WORKDIR /app
 
-# Copy the lambda function code to the container
-COPY src /app/src
+# Copy the source code
+COPY src/ /app/src/
+COPY requirements.txt /app
 
-# Install the required dependencies
-RUN python3.9 -m pip install -r requirements.txt -t .
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Set the entrypoint to the Lambda function handler
-CMD ["src/lambda_function.lambda_handler"]
+# Set the entry point
+CMD ["python", "/app/src/lambda_function.py"]
+
