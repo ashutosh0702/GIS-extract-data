@@ -16,4 +16,4 @@ phases:
       - docker push 268065301848.dkr.ecr.us-west-2.amazonaws.com/extract-data:latest
      
       - echo Updating the AWS Lambda function...
-      - aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --image-uri $ECR_REGISTRY/$ECR_REPOSITORY_NAME:$IMAGE_TAG
+      - aws lambda update-function-code --function-name extract-data --image-uri 268065301848.dkr.ecr.us-west-2.amazonaws.com/extract-data:latest
