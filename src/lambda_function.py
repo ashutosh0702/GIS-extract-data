@@ -56,7 +56,7 @@ def clipper(sentinel_band_url,shapes,clipped_band):
         f.write(response.content)
         
     with rasterio.open("/tmp/band.tif") as src:
-        out_image, out_transform = rasterio.mask.mask(src, [shapes] , crop=True)
+        out_image, out_transform = rasterio.mask.mask(src, [shapes] , crop=True, all_touched=True)
         out_meta = src.meta.copy()
     
     out_meta.update({
