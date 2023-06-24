@@ -236,7 +236,9 @@ def lambda_handler(event, context):
             utm.append(utm_pt)
 
         print(utm, type(utm))
-        utm_polygon = Polygon(utm)
+        #utm_polygon = Polygon(utm)
+        utm_polygon = Polygon(tuple(utm))
+
         print(utm_polygon, type(utm_polygon))
         assets = data["features"][0]["assets"]
     
@@ -285,6 +287,8 @@ def lambda_handler(event, context):
         )
 
         print(response)
+    
+    return f"####---- data successfully cretead for {key} -----#####"
 
     '''
     #Calculate Initial wait days
