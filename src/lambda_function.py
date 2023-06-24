@@ -229,7 +229,9 @@ def lambda_handler(event, context):
     else:
         utm , wgs84 = CRS.from_string(utm_epsg) , CRS.from_string('EPSG:4326')
         project = Transformer.from_crs(wgs84, utm, always_xy=True)
-    
+
+        print(coords)
+
         utm = []
         for item in coords:
             utm_pt = project.transform(item[0],item[1])
