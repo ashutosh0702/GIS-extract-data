@@ -236,8 +236,8 @@ def lambda_handler(event, context):
             utm.append(utm_pt)
 
         print(utm, type(utm))
-        #utm_polygon = Polygon(utm)
-        utm_polygon = Polygon(tuple(utm))
+        utm_polygon = Polygon(utm[0])
+        #utm_polygon = Polygon(tuple(utm))
 
         print(utm_polygon, type(utm_polygon))
         assets = data["features"][0]["assets"]
