@@ -234,9 +234,10 @@ def lambda_handler(event, context):
         for item in coords:
             utm_pt = project.transform(item[0],item[1])
             utm.append(utm_pt)
-    
+
+        print(utm, type(utm))
         utm_polygon = Polygon(utm)
-    
+        print(utm_polygon, type(utm_polygon))
         assets = data["features"][0]["assets"]
     
     
