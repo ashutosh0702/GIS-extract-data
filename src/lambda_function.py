@@ -227,22 +227,20 @@ def lambda_handler(event, context):
         return event
         
     else:
-        print(utm_epsg)
+        
         utm , wgs84 = CRS.from_string(utm_epsg) , CRS.from_string('EPSG:4326')
         project = Transformer.from_crs(wgs84, utm, always_xy=True)
 
-        print(coords)
+      
 
         utm = []
-        for item in coords:
+        for item in coords[0]:
             utm_pt = project.transform(item[0],item[1])
             utm.append(utm_pt)
 
-        print(utm, type(utm))
+        
         utm_polygon = Polygon(utm)
-        #utm_polygon = Polygon(tuple(utm))
 
-        print(utm_polygon, type(utm_polygon))
         assets = data["features"][0]["assets"]
     
     
