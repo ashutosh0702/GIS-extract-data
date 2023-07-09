@@ -284,7 +284,8 @@ def lambda_handler(event, context):
         state_machine_arn = 'arn:aws:states:us-west-2:268065301848:stateMachine:sentinel-2-data-calculate'
         response = sfn.start_execution(
             stateMachineArn=state_machine_arn,
-            input=json.dumps(stepfunctiondata)
+            input=json.dumps(stepfunctiondata),
+            name=f"{key[:-8]}"
         )
 
         print(response)
