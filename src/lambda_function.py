@@ -265,10 +265,10 @@ def lambda_handler(event, context):
     
         difference = now - date2
 
-    
+        
         seconds_difference = int(difference.total_seconds())
 
-
+        print(f"Now : {now} , Sensing : {date2} , Difference : {seconds_difference}")
         
         stepfunctiondata = {
 
