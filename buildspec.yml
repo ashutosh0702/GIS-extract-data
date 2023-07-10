@@ -17,3 +17,4 @@ phases:
      
       - echo Updating the AWS Lambda function...
       - aws lambda update-function-code --function-name extract-data --image-uri 268065301848.dkr.ecr.us-west-2.amazonaws.com/extract-data:latest
+  

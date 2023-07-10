@@ -279,13 +279,14 @@ def lambda_handler(event, context):
             "wait_duration_seconds" : seconds_difference
         }
 
+        
         # Start the Step Functions state machine with the STAC payload as input
         sfn = boto3.client('stepfunctions')
         state_machine_arn = 'arn:aws:states:us-west-2:268065301848:stateMachine:sentinel-2-data-calculate'
         response = sfn.start_execution(
             stateMachineArn=state_machine_arn,
             input=json.dumps(stepfunctiondata),
-            name=f"{key[:-8]}"
+            name=f"{key[:-8]}".replace(" ", "_")
         )
 
         print(response)
