@@ -171,13 +171,12 @@ def lambda_handler(event, context):
     # Get S3 bucket and file information from event
     print(event)
     bucket_input = event['Records'][0]['s3']['bucket']['name']
-    key = event['Records'][0]['s3']['object']['key']
+    key_in = event['Records'][0]['s3']['object']['key']
     
     # Decode the URL-encoded key
-    decoded_key = urllib.parse.unquote_plus(key)
-
-    print(bucket_input,key)
-    # Download GeoJSON file from S3
+    key = urllib.parse.unquote_plus(key_in)
+    print(key, key_in)
+    
     
     response = s3.get_object(Bucket=bucket_input, Key=key)
         
