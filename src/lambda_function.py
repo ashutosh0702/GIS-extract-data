@@ -4,6 +4,7 @@ from datetime import date
 from datetime import timedelta, datetime
 import requests
 import numpy as np
+import urllib.parse
 
 import rasterio.mask
 from rasterio.warp import calculate_default_transform, reproject
@@ -170,8 +171,10 @@ def lambda_handler(event, context):
     # Get S3 bucket and file information from event
     print(event)
     bucket_input = event['Records'][0]['s3']['bucket']['name']
-    #key = event['Records'][0]['s3']['object']['key'].replace('+', ' ')
     key = event['Records'][0]['s3']['object']['key']
+    
+    # Decode the URL-encoded key
+    decoded_key = urllib.parse.unquote_plus(key)
 
     print(bucket_input,key)
     # Download GeoJSON file from S3
