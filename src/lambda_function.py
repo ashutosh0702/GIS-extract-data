@@ -22,7 +22,7 @@ stac_api_endpoint = "https://earth-search.aws.element84.com/v1/search"
 bucket_out = "sentinel-2-cogs-rnil"
 # Start the Step Functions state machine with the STAC payload as input
 sfn = boto3.client('stepfunctions')
-state_machine_arn = 'arn:aws:states:us-west-2:268065301848:stateMachine:sentinel-2-data-calculate'
+
 
 def get_bbox_and_coords_from_geojson(geojson_str):
     
@@ -168,13 +168,15 @@ def calculate_data(index_name,band_list,meta_details):
     return "Success"  
 
 # Function to get the next available execution name
-def get_next_execution_name(base_name):
+def get_next_execution_name(base_name,st_arn):
+    print("Actual ARN : arn:aws:states:us-west-2:268065301848:execution:sentinel-2-data-calculate:235_Hari_Singh_bighar_fatehabad_1")
     execution_name = base_name
     counter = 1
     while True:
         try:
+            print(f"{st_arn}:{execution_name})
             sfn.describe_execution(
-                executionArn=f"{state_machine_arn}:{execution_name}"
+                executionArn=f"{st_arn}:{execution_name}"
             )
             # If the describe_execution call succeeds, the execution already exists
             # Increment the counter and try again
@@ -234,6 +236,7 @@ def lambda_handler(event, context):
 
     try :
         utm_epsg , utm_zone, sensing_date = "EPSG:"+str(data["features"][0]["properties"]["proj:epsg"]) , data["features"][0]["properties"]['mgrs:utm_zone'] , data["features"][0]["properties"]["created"]
+        print(f"Sensing_date : {sensing_date}")
     except:
         
         topic_arn = "arn:aws:sns:us-west-2:268065301848:NoData-Sentinel-API"
@@ -300,9 +303,11 @@ def lambda_handler(event, context):
                 "key" : key,},
             "wait_duration_seconds" : seconds_difference
         }
-
+        
+        state_machine_arn = 'arn:aws:states:us-west-2:268065301848:stateMachine:sentinel-2-data-calculate'
+        
         try:
-            execution_name = get_next_execution_name(f"{key[:-8]}".replace(" ", "_"))
+            execution_name = get_next_execution_name(f"{key[:-8]}".replace(" ", "_"),state_machine_arn)
             response = sfn.start_execution(
                 stateMachineArn=state_machine_arn,
                 input=json.dumps(stepfunctiondata),
