@@ -174,7 +174,7 @@ def get_next_execution_name(base_name,st_arn):
     counter = 1
     while True:
         try:
-            print(f"{st_arn}:{execution_name})
+            print(f"{st_arn}:{execution_name}")
             sfn.describe_execution(
                 executionArn=f"{st_arn}:{execution_name}"
             )
