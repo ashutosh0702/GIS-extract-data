@@ -20,6 +20,9 @@ s3 = boto3.client('s3')
 sns = boto3.client('sns')
 stac_api_endpoint = "https://earth-search.aws.element84.com/v1/search"
 bucket_out = "sentinel-2-cogs-rnil"
+# Start the Step Functions state machine with the STAC payload as input
+sfn = boto3.client('stepfunctions')
+state_machine_arn = 'arn:aws:states:us-west-2:268065301848:stateMachine:sentinel-2-data-calculate'
 
 def get_bbox_and_coords_from_geojson(geojson_str):
     
@@ -163,7 +166,23 @@ def calculate_data(index_name,band_list,meta_details):
     write_tiff_and_upload(upload_details)
         
     return "Success"  
-    
+
+# Function to get the next available execution name
+def get_next_execution_name(base_name):
+    execution_name = base_name
+    counter = 1
+    while True:
+        try:
+            sfn.describe_execution(
+                executionArn=f"{state_machine_arn}:{execution_name}"
+            )
+            # If the describe_execution call succeeds, the execution already exists
+            # Increment the counter and try again
+            execution_name = f"{base_name}_{counter}"
+            counter += 1
+        except sfn.exceptions.ExecutionDoesNotExist:
+            # Execution doesn't exist with this name, so it's available
+            return execution_name    
     
 
 def lambda_handler(event, context):
@@ -282,24 +301,21 @@ def lambda_handler(event, context):
             "wait_duration_seconds" : seconds_difference
         }
 
-        
-        # Start the Step Functions state machine with the STAC payload as input
-        sfn = boto3.client('stepfunctions')
-        state_machine_arn = 'arn:aws:states:us-west-2:268065301848:stateMachine:sentinel-2-data-calculate'
-        try :
+        try:
+            execution_name = get_next_execution_name(f"{key[:-8]}".replace(" ", "_"))
             response = sfn.start_execution(
                 stateMachineArn=state_machine_arn,
                 input=json.dumps(stepfunctiondata),
-                name=f"{key[:-8]}".replace(" ", "_")
+                name=execution_name
             )
-        except :
-            response = sfn.start_execution(
-                stateMachineArn=state_machine_arn,
-                input=json.dumps(stepfunctiondata),
-                name=f"{key[:-8]}_1".replace(" ", "_")
-            )
-
-        print(response)
+            print(response)
+        except sfn.exceptions.ExecutionLimitExceeded as e:
+            # Handle the case where you've reached the execution limit
+            print(f"Execution limit exceeded: {e}")
+        except Exception as e:
+            # Handle other exceptions as needed
+            print(f"An error occurred: {e}")
+       
     
     return f"####---- data successfully cretead for {key} -----#####"
 
