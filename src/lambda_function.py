@@ -286,52 +286,24 @@ def lambda_handler(event, context):
         # Start the Step Functions state machine with the STAC payload as input
         sfn = boto3.client('stepfunctions')
         state_machine_arn = 'arn:aws:states:us-west-2:268065301848:stateMachine:sentinel-2-data-calculate'
-        response = sfn.start_execution(
-            stateMachineArn=state_machine_arn,
-            input=json.dumps(stepfunctiondata),
-            name=f"{key[:-8]}".replace(" ", "_")
-        )
+        try :
+            response = sfn.start_execution(
+                stateMachineArn=state_machine_arn,
+                input=json.dumps(stepfunctiondata),
+                name=f"{key[:-8]}".replace(" ", "_")
+            )
+        except :
+            response = sfn.start_execution(
+                stateMachineArn=state_machine_arn,
+                input=json.dumps(stepfunctiondata),
+                name=f"{key[:-8]}_1".replace(" ", "_")
+            )
 
         print(response)
     
     return f"####---- data successfully cretead for {key} -----#####"
 
-    '''
-    #Calculate Initial wait days
-    # Convert date2_str to a datetime object
-    date2 = datetime.strptime(sensing_date.split("T")[0], '%Y-%m-%d')
-
-    # Calculate the difference
-    difference = now - date2
-
-    # Retrieve the difference in days
-    seconds_difference = int(difference.total_seconds())
-
-    print(seconds_difference) 
-
-    #Crrate the step function input json
-    stepfunctiondata = {
-
-        "input_data" : {
-            "coords" : coords[0],
-            "payload" : payload,
-            "key" : key,},
-        "wait_duration_seconds" : seconds_difference
-    }
-
-    # Start the Step Functions state machine with the STAC payload as input
-    sfn = boto3.client('stepfunctions')
-    state_machine_arn = 'arn:aws:states:us-west-2:268065301848:stateMachine:sentinel-2-data-calculate'
-    response = sfn.start_execution(
-        stateMachineArn=state_machine_arn,
-        input=json.dumps(stepfunctiondata)
-    )
-
-    print(response)
-
-
-    return f"####---- data successfully cretead for {key} -----#####"
-    '''
+    
     
     
     
