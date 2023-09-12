@@ -183,14 +183,13 @@ def get_next_execution_name(base_name,st_arn):
             execution_name = f"{base_name}_{counter}"
             counter += 1
         except sfn.exceptions.ExecutionDoesNotExist:
+            print("Inside except")
             # Execution doesn't exist with this name, so it's available
             return execution_name    
     
 
 def lambda_handler(event, context):
     
-    print("--------- Successfully deployed using docker image -----------")
-    # Get S3 bucket and file information from event
     print(event)
     bucket_input = event['Records'][0]['s3']['bucket']['name']
     key_in = event['Records'][0]['s3']['object']['key']
@@ -226,12 +225,10 @@ def lambda_handler(event, context):
         "limit": 1
     }
     
-    print(payload)
     #Hitting the STAC api version 2 by element84
     response = requests.post(stac_api_endpoint, data = json.dumps(payload), headers = headers)
     data = response.json()
     
-    print(data)
     
 
     try :
@@ -308,6 +305,7 @@ def lambda_handler(event, context):
         
         try:
             execution_name = get_next_execution_name(f"{key[:-8]}".replace(" ", "_"),state_machine_arn)
+            print(f"Initializing step functions :{execution_name}")
             response = sfn.start_execution(
                 stateMachineArn=state_machine_arn,
                 input=json.dumps(stepfunctiondata),
