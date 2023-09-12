@@ -176,7 +176,7 @@ def get_next_execution_name(base_name,st_arn):
         try:
             print(f"{st_arn}:{execution_name}")
             sfn.describe_execution(
-                executionArn=f"{st_arn}:{execution_name}"
+                executionArn=f"{st_arn}:{execution_name}".replace("stateMachine","execution")
             )
             # If the describe_execution call succeeds, the execution already exists
             # Increment the counter and try again
