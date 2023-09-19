@@ -135,21 +135,6 @@ def calculate_data(index_name, band_list, meta_details):
     return "Success"
 
 
-# Function to get the next available execution name
-def get_next_execution_name(base_name,st_arn):
-    
-    execution_name = base_name
-    counter = 1
-    while True:
-        try:
-            sfn.describe_execution(
-                executionArn=f"{st_arn}:{execution_name}".replace("stateMachine","execution")
-            )
-            execution_name = f"{base_name}_{counter}"
-            counter += 1
-        except sfn.exceptions.ExecutionDoesNotExist:
-           
-            return execution_name    
     
 
 def lambda_handler(event, context):
@@ -261,24 +246,28 @@ def lambda_handler(event, context):
                 "key" : key,},
             "wait_duration_seconds" : seconds_difference
         }
-        
         state_machine_arn = 'arn:aws:states:us-west-2:268065301848:stateMachine:sentinel-2-data-calculate'
         
         try:
-            execution_name = get_next_execution_name(f"{key[:-8]}".replace(" ", "_"),state_machine_arn)
-            print(f"Initializing step functions :{execution_name}")
+            # Removed the line for generating execution_name
+            print("Initializing step functions with default execution name.")
+            
+            # Removed the name parameter to let AWS set it to default
             response = sfn.start_execution(
                 stateMachineArn=state_machine_arn,
-                input=json.dumps(stepfunctiondata),
-                name=execution_name
+                input=json.dumps(stepfunctiondata)
             )
+            
             print(response)
+            
         except sfn.exceptions.ExecutionLimitExceeded as e:
             # Handle the case where you've reached the execution limit
             print(f"Execution limit exceeded: {e}")
+            
         except Exception as e:
             # Handle other exceptions as needed
             print(f"An error occurred: {e}")
+
        
     
     return f"####---- data successfully cretead for {key} -----#####"
