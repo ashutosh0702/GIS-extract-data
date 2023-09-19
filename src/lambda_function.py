@@ -240,9 +240,10 @@ def lambda_handler(event, context):
         for ky,value in formula_dict.items():
         
             msg = calculate_data(ky,value,meta_details)
-       
+        
+        print(sensing_date)
         # Parse the full date and time from the sensing_date string
-        date2 = datetime.strptime(sensing_date, '%Y-%m-%dT%H:%M:%S')
+        date2 = datetime.strptime(sensing_date, '%Y-%m-%dT%H:%M:%S.%fZ')
 
     
         difference = now - date2
