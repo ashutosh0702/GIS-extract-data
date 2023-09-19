@@ -1,27 +1,34 @@
 import json
 import boto3
-from datetime import date
-from datetime import timedelta, datetime
 import requests
 import numpy as np
 import urllib.parse
-
 import rasterio.mask
+from datetime import date, timedelta, datetime
 from rasterio.warp import calculate_default_transform, reproject
 from rasterio.enums import Resampling
-from shapely.geometry import box , Polygon
-from pyproj import Proj , CRS , Transformer  
-import sys
+from shapely.geometry import box, Polygon
+from pyproj import Proj, CRS, Transformer
 import os
-sys.path.append('/opt')
+import tempfile
 
+# Environment Variables
+stac_api_endpoint = os.environ.get("STAC_API_ENDPOINT", "https://earth-search.aws.element84.com/v1/search")
+bucket_out = os.environ.get("BUCKET_OUT", "sentinel-2-cogs-rnil")
+sns_topic_arn = os.environ.get("SNS_TOPIC_ARN", "arn:aws:sns:us-west-2:268065301848:NoData-Sentinel-API")
+state_machine_arn = os.environ.get("STATE_MACHINE_ARN", 'arn:aws:states:us-west-2:268065301848:stateMachine:sentinel-2-data-calculate')
 
+# AWS Clients
 s3 = boto3.client('s3')
 sns = boto3.client('sns')
-stac_api_endpoint = "https://earth-search.aws.element84.com/v1/search"
-bucket_out = "sentinel-2-cogs-rnil"
-# Start the Step Functions state machine with the STAC payload as input
 sfn = boto3.client('stepfunctions')
+
+# Remote Sensing Indices
+formula_dict = {
+    'NDVI': ['red', 'nir'],
+    'NDMI': ['nir08', 'swir16']
+}
+
 
 
 def get_bbox_and_coords_from_geojson(geojson_str):
@@ -43,148 +50,105 @@ def get_bbox_and_coords_from_geojson(geojson_str):
     
     return bbox, coordinates
     
-def clipper(sentinel_band_url,shapes,clipped_band):
-    
-    '''
-    This function takes the satellite bands to the feature provided and write the clipped raster band to /tmp
-    sentinel_band_url : sentinel band s3 urllib
-    shapes : utm projected coordinates of the farm field
-    clipped_band : clipped band name to store in /tmp directory
-    
-    '''
-    print(sentinel_band_url)
-
+def clipper(sentinel_band_url, shapes, clipped_band):
     response = requests.get(sentinel_band_url)
-
-    with open("/tmp/band.tif", 'wb') as f:
-        f.write(response.content)
-        
-    with rasterio.open("/tmp/band.tif") as src:
-        
-        out_image, out_transform = rasterio.mask.mask(src, [shapes] , crop=True, all_touched=True)
-        out_meta = src.meta.copy()
     
+    with tempfile.NamedTemporaryFile(suffix='.tif', delete=False) as temp_band:
+        temp_band.write(response.content)
+        temp_band_path = temp_band.name
+
+    with rasterio.open(temp_band_path) as src:
+        out_image, out_transform = rasterio.mask.mask(src, [shapes], crop=True, all_touched=True)
+        out_meta = src.meta.copy()
+
     out_meta.update({
         "height": out_image.shape[1],
         "width": out_image.shape[2],
         "transform": out_transform
     })
-    
-    
-    # Update the shape of the clipped raster
-    out_meta['height'] = out_image.shape[1]
-    out_meta['width'] = out_image.shape[2]
-    
-    
-    with rasterio.open(f"/tmp/{clipped_band}.tif", 'w', **out_meta) as dst:
-        dst.nodata = -9999   
-        dst.write(out_image.astype(rasterio.uint16))
 
-    
-        
+    with tempfile.NamedTemporaryFile(suffix='.tif', delete=False) as temp_clipped_band:
+        with rasterio.open(temp_clipped_band.name, 'w', **out_meta) as dst:
+            dst.nodata = -9999   
+            dst.write(out_image.astype(rasterio.uint16))
+        return temp_clipped_band.name
+
 def write_tiff_and_upload(upload_details):
-    '''
-    upload_details = {
-        "dataArray" : 2D array,
-        "metaData" : meta_data_dict,
-        "fileNameToUpload" : f"{farmID}_{farmName}/datetime_indexName.tif",
-    }
-    
-    '''
     arr = upload_details['dataArray']
     meta = upload_details['metaData']
     filetiff = upload_details['fileNameToUpload']
 
-    height, width = arr.shape
-
-    # Raster is already at 10m resolution, do nothing
-    with rasterio.open(os.path.join('/tmp','tmp.tif'), 'w', **meta) as dst:
-        dst.nodata = -9999
-        dst.write(arr.astype(rasterio.float32), 1)
-
-
-    
-    s3.upload_file(os.path.join('/tmp','tmp.tif'), bucket_out, filetiff)   
-    
+    with tempfile.NamedTemporaryFile(suffix='.tif', delete=False) as temp_tiff:
+        with rasterio.open(temp_tiff.name, 'w', **meta) as dst:
+            dst.nodata = -9999
+            dst.write(arr.astype(rasterio.float32), 1)
+        s3.upload_file(temp_tiff.name, bucket_out, filetiff)
     
 
-def calculate_data(index_name,band_list,meta_details):
-    '''
-    band_list : list of bands names to download,
-    index_name : name of index that is being calculated
-    meta_details = {
-        "fileName" : "ABC",
-        "sensingDate" : "XYZ",
-        "UTMshape" : utm transformed polygon feature,
-        "asset_data" : asset data of the sentinel product
-    }
-    
-    '''
-   
+def calculate_data(index_name, band_list, meta_details):
     fileName = meta_details['fileName']
     sensing_date = meta_details['sensingDate']
     shapes = meta_details['UTMshape']
     assets = meta_details['asset_data']
-    
-    #Clipped the indiviudal bands
+
+    # Initialize empty list to store temporary file paths
+    temp_file_paths = []
+
+    # Clip the individual bands and store the temporary file paths
     for item in band_list:
         sentinel_band_url = assets[item]['href']
-        clipper(sentinel_band_url,shapes,item)
-    
-    #Get the band.tiff files   
-    raster1 = f"/tmp/{band_list[0]}.tif"
-    raster2 = f"/tmp/{band_list[1]}.tif"
+        temp_file_path = clipper(sentinel_band_url, shapes, item)
+        temp_file_paths.append(temp_file_path)
 
-    
-    src = rasterio.open(raster1)
-    index_meta = src.meta.copy()
+    # Read the bands from the temporary files
+    with rasterio.open(temp_file_paths[0]) as src:
+        bandA = src.read(1)
+        index_meta = src.meta.copy()
+
+    with rasterio.open(temp_file_paths[1]) as src:
+        bandB = src.read(1)
+
+    # Update metadata for the index raster
     index_meta.update(
         dtype=rasterio.float32,
         count=1,
-        compress='lzw')
-    
-    #Read the both the bands
-    bandA = src.read(1)
-    
-    src = rasterio.open(raster2)
-    bandB = src.read(1)
+        compress='lzw'
+    )
 
-    #Perfomr raster calculation
-    calc_index_array = np.zeros(bandA.shape, dtype=rasterio.float32)
-    
+    # Perform raster calculation
     calc_index_array = (bandB.astype(float) - bandA.astype(float)) / (bandB + bandA)
 
-    
     fileToUpload = f"{fileName}/{sensing_date}_{index_name}.tif"
-    
+
     upload_details = {
-        "dataArray" : calc_index_array,
-        "metaData" : index_meta,
-        "fileNameToUpload" : fileToUpload,
+        "dataArray": calc_index_array,
+        "metaData": index_meta,
+        "fileNameToUpload": fileToUpload,
     }
-    
+
     write_tiff_and_upload(upload_details)
-        
-    return "Success"  
+
+    # Optionally, remove temporary files if you don't need them anymore
+    for temp_file_path in temp_file_paths:
+        os.remove(temp_file_path)
+
+    return "Success"
+
 
 # Function to get the next available execution name
 def get_next_execution_name(base_name,st_arn):
-    print("Actual ARN : arn:aws:states:us-west-2:268065301848:execution:sentinel-2-data-calculate:235_Hari_Singh_bighar_fatehabad_1")
+    
     execution_name = base_name
     counter = 1
     while True:
         try:
-            print(f"{st_arn}:{execution_name}")
             sfn.describe_execution(
                 executionArn=f"{st_arn}:{execution_name}".replace("stateMachine","execution")
             )
-            # If the describe_execution call succeeds, the execution already exists
-            # Increment the counter and try again
             execution_name = f"{base_name}_{counter}"
             counter += 1
         except sfn.exceptions.ExecutionDoesNotExist:
-            print("Inside except")
-            # Execution doesn't exist with this name, so it's available
+           
             return execution_name    
     
 
@@ -266,11 +230,6 @@ def lambda_handler(event, context):
         assets = data["features"][0]["assets"]
     
     
-        formula_dict = {
-            'NDVI' : ['red','nir'],
-            'NDMI' : ['nir08','swir16']
-        }
-    
         meta_details = {
             "fileName" : key[:-8],
             "sensingDate" : sensing_date.split("T")[0],
@@ -282,7 +241,8 @@ def lambda_handler(event, context):
         
             msg = calculate_data(ky,value,meta_details)
        
-        date2 = datetime.strptime(sensing_date.split("T")[0], '%Y-%m-%d')
+        # Parse the full date and time from the sensing_date string
+        date2 = datetime.strptime(sensing_date, '%Y-%m-%dT%H:%M:%S')
 
     
         difference = now - date2
